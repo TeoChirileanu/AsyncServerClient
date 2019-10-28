@@ -1,24 +1,25 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.IO;
 using System.Net.Sockets;
-using System.Text;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
+using NetworkServer.Properties;
 
-namespace TcpServer
+namespace NetworkServer
 {
     public static class Server
     {
         private const int Port = 1337;
-        private const string Message = "Hello World";
-        private static TcpListener _server;
 
         public static async Task Main()
         {
+            var server = TcpListener.Create(Port);
             try
             {
-                _server = TcpListener.Create(Port);
-                _server.Start();
-                Console.WriteLine($"Server started on port {Port}");
-                await Run(_server);
+                server.Start();
+                Console.WriteLine(Resources.Started, Port);
+                await Run(server);
             }
             catch (Exception e)
             {
@@ -26,28 +27,32 @@ namespace TcpServer
             }
             finally
             {
-                _server.Stop();
-                Console.WriteLine("Stopped server");
+                server.Stop();
+                Console.WriteLine(Resources.Stopped);
             }
         }
 
         private static async Task Run(TcpListener server)
         {
-            Console.WriteLine("Server running...");
+            Console.WriteLine(Resources.Running);
             while (true)
             {
-                Console.WriteLine("Waiting a client to connect...");
+                Console.WriteLine(Resources.Waiting);
                 var client = await server.AcceptTcpClientAsync();
-                Console.WriteLine("Established connection with client");
+                Console.WriteLine(Resources.Established);
                 await using var stream = client.GetStream();
-                var data = Encoding.ASCII.GetBytes(Message);
-                await stream.WriteAsync(data, 0, data.Length);
-                Console.WriteLine($"Sent {Message} to client");
-                await stream.FlushAsync();
-                Console.WriteLine("Flushing the toilet");
+                var messageAsBytes = await GetMessageAsBytes();
+                await stream.WriteAsync(messageAsBytes);
+                Console.WriteLine(Resources.Sent, messageAsBytes.Length);
                 client.Close();
-                Console.WriteLine("Closed connection with client");
+                Console.WriteLine(Resources.Closed);
             }
+        }
+
+        private static async Task<byte[]> GetMessageAsBytes()
+        {
+            const string file = @"C:\rider.exe";
+            return await File.ReadAllBytesAsync(file);
         }
     }
 }
